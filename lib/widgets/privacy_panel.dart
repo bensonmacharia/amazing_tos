@@ -8,9 +8,20 @@ class PrivacyPanel extends StatefulWidget {
   State<PrivacyPanel> createState() => _PrivacyPanelState();
 }
 
-class _PrivacyPanelState extends State<PrivacyPanel> {
+class _PrivacyPanelState extends State<PrivacyPanel>
+    with SingleTickerProviderStateMixin {
   int? openIndex;
   bool isOpen = true;
+
+  late AnimationController pulseController;
+  late Animation<double> pulseAnimation;
+
+  static const panelBlue = Color(0xFF0E3F9A);
+  static const topBlue = Color(0xFF2F56A6);
+  static const borderBlue = Color(0xFF86D4FF);
+  static const paleBlue = Color(0xFFEAF7FF);
+  static const bodyGray = Color(0xFFF3F3F3);
+  static const activeBlue = Color(0xFF2149A7);
 
   final List<Map<String, String>> items = [
     {
@@ -46,137 +57,219 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+
+    pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(
+      CurvedAnimation(
+        parent: pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
-      width: isOpen ? 455 : 58,
+    return SizedBox(
       height: MediaQuery.of(context).size.height,
-      color: const Color(0xFF0B3E9A),
-      child: isOpen ? _buildOpenPanel() : _buildClosedPanel(),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        transitionBuilder: (child, animation) {
+          return SizeTransition(
+            sizeFactor: animation,
+            axis: Axis.horizontal,
+            axisAlignment: 1.0,
+            child: child,
+          );
+        },
+        child: isOpen
+            ? SizedBox(
+                key: const ValueKey("open"),
+                width: 455,
+                child: _buildOpenPanel(),
+              )
+            : SizedBox(
+                key: const ValueKey("closed"),
+                width: 58,
+                child: _buildClosedPanel(),
+              ),
+      ),
     );
   }
 
   /// ================= OPEN PANEL =================
   Widget _buildOpenPanel() {
-    return Column(
-      children: [
-        /// TOP BAR
-        Container(
-          height: 68,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          color: const Color(0xFF2F56A6),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.shield_outlined,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                "Privacy Monitor",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    isOpen = false;
-                  });
-                },
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        /// INFO BAR
-        Container(
-          width: double.infinity,
-          color: const Color(0xFFE9F5FF),
-          padding: const EdgeInsets.all(14),
-          child: const Text(
-            "Before you agree, here's what you should know",
-            style: TextStyle(
-              color: Color(0xFF456AA7),
-              fontSize: 13,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        /// ACCORDIONS + CHAT AREA
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
+    return Container(
+      key: const ValueKey("panel_open"),
+      color: bodyGray,
+      child: Column(
+        children: [
+          /// TOP BAR
+          Container(
+            height: 68,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18),
+            color: topBlue,
+            child: Row(
               children: [
-                /// ACCORDIONS
-                ...List.generate(
-                  items.length,
-                  (index) => _accordion(
-                    index,
-                    items[index]["title"]!,
-                    items[index]["body"]!,
+                const Icon(
+                  Icons.shield_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  "Privacy Monitor",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
+                const Spacer(),
 
-                const SizedBox(height: 14),
-
-                /// CHAT TITLE
-                const Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 18),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Ask AI Questions",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      isOpen = false;
+                    });
+                  },
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 22,
                   ),
-                ),
-
-                const SizedBox(height: 10),
-
-                /// AI CHAT BOX
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(
-                      18, 0, 18, 18),
-                  child: AiChatBox(),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+
+          /// INFO STRIP
+          Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 14,
+            ),
+            color: const Color(0xFFE6F4FF),
+            child: const Text(
+              "Before you agree, here's what you should know",
+              style: TextStyle(
+                color: Color(0xFF4D6EA7),
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          /// CONTENT
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ...List.generate(
+                    items.length,
+                    (i) => _accordion(
+                      i,
+                      items[i]["title"]!,
+                      items[i]["body"]!,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 18),
+                    child: Align(
+                      alignment:
+                          Alignment.centerLeft,
+                      child: Text(
+                        "Ask AI Questions",
+                        style: TextStyle(
+                          color: topBlue,
+                          fontSize: 16,
+                          fontWeight:
+                              FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(
+                        18, 0, 18, 18),
+                    child: AiChatBox(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   /// ================= CLOSED PANEL =================
   Widget _buildClosedPanel() {
-    return Center(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            isOpen = true;
-          });
-        },
-        child: const Icon(
-          Icons.shield_outlined,
-          color: Colors.white,
-          size: 28,
+    return Container(
+      key: const ValueKey("panel_closed"),
+      color: const Color(0xFFF8F8F8),
+      child: Center(
+        child: ScaleTransition(
+          scale: pulseAnimation,
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                isOpen = true;
+              });
+            },
+            borderRadius:
+                BorderRadius.circular(30),
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color:
+                    const Color(0xFF3D7BFF),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black
+                        .withOpacity(0.18),
+                    blurRadius: 8,
+                    offset:
+                        const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.shield_outlined,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -191,13 +284,13 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
     bool expanded = openIndex == index;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
+      padding:
+          const EdgeInsets.symmetric(
         horizontal: 18,
         vertical: 6,
       ),
       child: Column(
         children: [
-          /// HEADER
           InkWell(
             onTap: () {
               setState(() {
@@ -214,17 +307,20 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(
-                  color:
-                      const Color(0xFF82CFFF),
+                  color: expanded
+                      ? activeBlue
+                      : borderBlue,
+                  width:
+                      expanded ? 2 : 1,
                 ),
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.info_outline,
-                    color:
-                        Color(0xFF82CFFF),
                     size: 18,
+                    color:
+                        borderBlue,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -234,7 +330,8 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
                           const TextStyle(
                         fontSize: 15,
                         fontWeight:
-                            FontWeight.w500,
+                            FontWeight
+                                .w500,
                       ),
                     ),
                   ),
@@ -242,7 +339,8 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
                     expanded
                         ? Icons.remove
                         : Icons.add,
-                    color: Colors.grey,
+                    color:
+                        Colors.grey,
                     size: 18,
                   ),
                 ],
@@ -250,61 +348,94 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
             ),
           ),
 
-          /// BODY
           AnimatedCrossFade(
             duration:
-                const Duration(milliseconds: 250),
-            crossFadeState: expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            firstChild: Container(),
+                const Duration(
+                    milliseconds:
+                        250),
+            crossFadeState:
+                expanded
+                    ? CrossFadeState
+                        .showSecond
+                    : CrossFadeState
+                        .showFirst,
+            firstChild:
+                Container(),
 
-            secondChild: Container(
-              width: double.infinity,
+            secondChild:
+                Container(
+              width:
+                  double.infinity,
               padding:
-                  const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
+                  const EdgeInsets
+                      .all(12),
+              decoration:
+                  BoxDecoration(
+                color:
+                    Colors.white,
+                border:
+                    Border.all(
                   color:
-                      const Color(0xFF82CFFF),
+                      borderBlue,
                 ),
               ),
               child: Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    CrossAxisAlignment
+                        .start,
                 children: [
                   const Text(
                     "PLAIN LANGUAGE",
-                    style: TextStyle(
+                    style:
+                        TextStyle(
+                      fontSize:
+                          13,
                       fontWeight:
-                          FontWeight.bold,
-                      color: Colors.grey,
-                      fontSize: 13,
+                          FontWeight
+                              .w700,
+                      color:
+                          Colors
+                              .grey,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                      height: 8),
 
                   Text(
                     body,
                     style:
                         const TextStyle(
-                      fontSize: 14,
-                      height: 1.45,
+                      fontSize:
+                          14,
+                      height:
+                          1.45,
+                      color: Colors
+                          .black87,
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(
+                      height: 14),
 
                   Container(
-                    width: double.infinity,
+                    width: double
+                        .infinity,
                     padding:
-                        const EdgeInsets.all(
-                            12),
-                    color: const Color(
-                        0xFFEAF7FF),
-                    child: const Column(
+                        const EdgeInsets
+                            .all(12),
+                    decoration:
+                        BoxDecoration(
+                      color:
+                          paleBlue,
+                      border:
+                          Border.all(
+                        color:
+                            borderBlue,
+                      ),
+                    ),
+                    child:
+                        const Column(
                       crossAxisAlignment:
                           CrossAxisAlignment
                               .start,
@@ -314,47 +445,59 @@ class _PrivacyPanelState extends State<PrivacyPanel> {
                           style:
                               TextStyle(
                             fontWeight:
-                                FontWeight
-                                    .bold,
-                            color: Color(
-                                0xFF2F56A6),
+                                FontWeight.bold,
+                            color:
+                                topBlue,
                           ),
                         ),
                         SizedBox(
-                            height: 8),
+                            height:
+                                8),
                         Text(
                             "• Can I delete my data?"),
                         SizedBox(
-                            height: 6),
+                            height:
+                                6),
                         Text(
                             "• Who do you share my data with?"),
                         SizedBox(
-                            height: 6),
+                            height:
+                                6),
                         Text(
                             "• How long do you keep my information?"),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(
+                      height: 14),
 
                   const Text(
                     "ORIGINAL LEGAL TEXT",
-                    style: TextStyle(
+                    style:
+                        TextStyle(
+                      fontSize:
+                          13,
                       fontWeight:
-                          FontWeight.bold,
-                      color: Colors.grey,
-                      fontSize: 13,
+                          FontWeight
+                              .w700,
+                      color:
+                          Colors
+                              .grey,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                      height: 8),
 
                   const Text(
                     "By using our service, you agree to our collection of personal information including but not limited to email addresses, IP addresses, device identifiers, and usage data. We may share this information with third-party service providers for analytics, payment processing, and marketing purposes.",
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.45,
+                    style:
+                        TextStyle(
+                      fontSize:
+                          14,
+                      height:
+                          1.45,
                     ),
                   ),
                 ],
